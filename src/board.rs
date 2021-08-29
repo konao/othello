@@ -107,6 +107,15 @@ impl Board {
         self.setPiece(5, 4, Piece::Black);
     }
 
+    pub fn init2(&mut self) -> () {
+        self.setPiece(4, 4, Piece::White);
+        self.setPiece(5, 5, Piece::Black);
+        self.setPiece(4, 5, Piece::Black);
+        self.setPiece(5, 4, Piece::Black);
+        self.setPiece(6, 5, Piece::Black);
+        self.setPiece(6, 6, Piece::White);
+    }
+
     pub fn setPiece(&mut self, x: i32, y: i32, piece: Piece) -> () {
         if let Some(idx) = Pos::idx(x, y) {
             self.pieces[idx] = piece;
@@ -126,14 +135,18 @@ impl Board {
         let mut result = Vec::new();
         for y in 1..=8 {
             for x in 1..=8 {
-                let score = self.searchPosSub(piece, x, y);
-                if score>0 {
-                    let info = PlaceInfo {
-                        x: x,
-                        y: y,
-                        score: score
-                    };
-                    result.push(info);
+                if let Some(p) = self.getPiece(x, y) {
+                    if *p == Piece::Space {
+                        let score = self.searchPosSub(piece, x, y);
+                        if score>0 {
+                            let info = PlaceInfo {
+                                x: x,
+                                y: y,
+                                score: score
+                            };
+                            result.push(info);
+                        }
+                    }
                 }
             }
         }
