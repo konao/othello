@@ -360,4 +360,19 @@ impl Board {
 
         return results;
     }
+
+    pub fn getBestMove(&self, piece: &Piece, depth: i32) -> Option<SearchResult3> {
+        let mut bestMove = None;
+
+        let allMoves = self.genSearchTree(piece, depth);
+        let mut bestScore = -1;
+        for m in &allMoves {
+            if m.score > bestScore {
+                bestScore = m.score;
+                bestMove = Some(m.clone());
+            }
+        }
+
+        return bestMove;
+    }
 }

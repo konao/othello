@@ -27,21 +27,40 @@ fn main() {
     //     c=c+1;
     // }
 
-    let tree = board.genSearchTree(&board::Piece::White, 3);
-    for elem in &tree {
+    // let tree = board.genSearchTree(&board::Piece::White, 3);
+    // for elem in &tree {
+    //     print!("path: ");
+    //     let n = &elem.path.len();
+    //     for i in 0..*n {
+    //         let p = &elem.path[i];
+    //         print!("({}, {})", p.pos.x, p.pos.y);
+    //         if i<n-1 {
+    //             print!("-");
+    //         }
+    //     }
+    //     println!();
+
+    //     println!("score: {}", elem.score);
+    //     elem.board.print();
+    // }
+
+    let maybeResult = board.getBestMove(&board::Piece::White, 3);
+    if let Some(result) = maybeResult {
         print!("path: ");
-        let n = &elem.path.len();
+        let n = &result.path.len();
         for i in 0..*n {
-            let p = &elem.path[i];
+            let p = &result.path[i];
             print!("({}, {})", p.pos.x, p.pos.y);
             if i<n-1 {
                 print!("-");
             }
         }
         println!();
-
-        println!("score: {}", elem.score);
-        elem.board.print();
+    
+        println!("score: {}", result.score);
+        result.board.print();
+    } else {
+        println!("no result found");
     }
 }
     
