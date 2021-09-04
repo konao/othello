@@ -77,6 +77,19 @@ pub struct SearchResult2 {
     pub capturedPieceLocs: Vec<Pos>
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct SearchResult3 {
+    pub path: Vec<SearchResult3Sub>,  // 駒を置いたパス
+    pub board: Board,   // pathに置いた結果
+    pub score: i32
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SearchResult3Sub {
+    pub pos: Pos,
+    pub piece: Piece
+}
+
 // オセロ盤
 #[derive(Clone, Debug, PartialEq)]
 pub struct Board {
@@ -251,9 +264,9 @@ impl Board {
         let opponent = Piece::getOpponent(piece);
 
         // 置けるところがあった
-        println!("possible next moves:");
+        // println!("possible next moves:");
         for pi in &places {
-            println!("({}, {})", pi.pos.x, pi.pos.y);
+            // println!("({}, {})", pi.pos.x, pi.pos.y);
             let mut newBoard = self.clone();
             newBoard.setPiece(pi.pos.x, pi.pos.y, *piece);
 
@@ -287,6 +300,62 @@ impl Board {
                 score: pi.scoreInfo.score,
                 capturedPieceLocs: capturedPieceLocs.clone()
             });
+        }
+
+        return results;
+    }
+
+    pub fn genSearchTree(&self, piece: &Piece, depth: i32) -> Vec<SearchResult3> {
+        let root = SearchResult3 {
+            path: vec!(),
+            board: self.clone(),
+            score: 0
+        };
+        return self.genSearchTreeSub(piece, piece, depth, &root);
+    }
+
+    pub fn genSearchTreeSub(&self, origPiece: &Piece, piece: &Piece, depth: i32, tree: &SearchResult3) -> Vec<SearchResult3> {
+        let mut results = vec!();
+
+        if depth > 0 {
+            let nextBoards = self.genNextBoard(piece);
+            for nextBoard in &nextBoards {
+                let mut newPath = tree.path.clone();
+                newPath.push(SearchResult3Sub {
+                    pos: nextBoard.pos,
+                    piece: *piece
+                });
+
+                let mut newScore = tree.score;
+                if piece == origPiece {
+                    // pieceは自分の駒
+                    newScore += nextBoard.score;
+                } else {
+                    // pieceは敵の駒
+                    newScore -= nextBoard.score;
+                }
+
+                let newDepth = depth - 1;
+                if newDepth > 0 {
+                    let newTree = SearchResult3 {
+                        path: newPath,
+                        board: nextBoard.board.clone(),
+                        score: newScore
+                    };
+                    return nextBoard.board.genSearchTreeSub(
+                        origPiece,
+                        &Piece::getOpponent(piece),
+                        newDepth,
+                        &newTree
+                    );
+                } else {
+                    results.push(SearchResult3 {
+                        path: newPath,
+                        board: nextBoard.board.clone(),
+                        score: newScore
+                    })
+                }
+            }
         }
 
         return results;

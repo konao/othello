@@ -19,27 +19,29 @@ fn main() {
     //     println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
     // }
 
-    let mut c=0;
-    let nextBoards = board.genNextBoard(&board::Piece::White);
-    for nextBoard in &nextBoards {
-        println!("[{}] ({}, {})", c, nextBoard.pos.x, nextBoard.pos.y);
-        nextBoard.board.print();
-        c=c+1;
-    }
-
     // let mut c=0;
     // let nextBoards = board.genNextBoard(&board::Piece::White);
     // for nextBoard in &nextBoards {
-    //     println!("{} ({}, {})", c, nextBoard.pos.x, nextBoard.pos.y);
+    //     println!("[{}] ({}, {})", c, nextBoard.pos.x, nextBoard.pos.y);
     //     nextBoard.board.print();
-    //     let mut d=0;
-    //     let nextBoards2 = nextBoard.board.genNextBoard(&board::Piece::Black);
-    //     for nextBoard2 in &nextBoards2 {
-    //         println!("{}-{} ({}, {})", c, d, nextBoard2.pos.x, nextBoard2.pos.y);
-    //         d=d+1;
-    //         nextBoard2.board.print();
-    //     }
     //     c=c+1;
     // }
+
+    let tree = board.genSearchTree(&board::Piece::White, 3);
+    for elem in &tree {
+        print!("path: ");
+        let n = &elem.path.len();
+        for i in 0..*n {
+            let p = &elem.path[i];
+            print!("({}, {})", p.pos.x, p.pos.y);
+            if i<n-1 {
+                print!("-");
+            }
+        }
+        println!();
+
+        println!("score: {}", elem.score);
+        elem.board.print();
+    }
 }
     
