@@ -114,7 +114,10 @@ impl Board {
 
     // コンソールに表示する
     pub fn print(&self) -> () {
+        println!("   A B C D E F G H");
+        println!(" -----------------");
         for y in 1..=8 {
+            print!("{}|", y);
             for x in 1..=8 {
                 if let Some(idx) = Pos::idx(x, y) {
                     let piece = &self.pieces[idx];
@@ -168,13 +171,14 @@ impl Board {
             for x in 1..=8 {
                 if let Some(p) = self.getPiece(x, y) {
                     if *p == Piece::Space {
-                        let res = self.searchPosSub(piece, &Pos{x, y});
-                        if res.score>0 {
-                            let info = SearchResult1 {
-                                pos: Pos { x, y },
-                                scoreInfo: res
-                            };
-                            result.push(info);
+                        if let Some(res) = self.searchPosSub(piece, &Pos{x, y}) {
+                            if res.score>0 {
+                                let info = SearchResult1 {
+                                    pos: Pos { x, y },
+                                    scoreInfo: res
+                                };
+                                result.push(info);
+                            }
                         }
                     }
                 }
@@ -184,58 +188,68 @@ impl Board {
     }
 
     // (x, y)にpieceを置いたら何個相手の駒を取れるかを返す
-    // @param x [i]
-    // @param y [i]
-    pub fn searchPosSub(&self, piece: &Piece, pos: &Pos) -> SearchResult1Sub {
+    // @param piece [i]
+    // @param pos [i] 置く位置
+    //
+    // @return posにpieceを置けない場合はNoneが返る
+    pub fn searchPosSub(&self, piece: &Piece, pos: &Pos) -> Option<SearchResult1Sub> {
         let opponent = Piece::getOpponent(piece);
         let mut score = 0;
         let mut dirs = vec!();
-        for dir in 0..8 {
-            let (dx, dy) = Pos::getDxDy(dir);
-            let mut x1 = pos.x + dx;
-            let mut y1 = pos.y + dy;
-            if let Some(p) = self.getPiece(x1, y1) {
-                if *p == opponent {
-                    // (dx, dy)に進めたら敵の駒があった
-                    // さらに進めて、空白になる前に自分の駒があれば、(x, y)にpieceを置ける
-                    let mut c = 1;
-                    x1 = x1 + dx;
-                    y1 = y1 + dy;
-                    let mut proceeding = false;
-                    let mut got = false;
+
+        if let Some(p) = self.getPiece(pos.x, pos.y) {
+            if *p == Piece::Space {
+                for dir in 0..8 {
+                    let (dx, dy) = Pos::getDxDy(dir);
+                    let mut x1 = pos.x + dx;
+                    let mut y1 = pos.y + dy;
                     if let Some(q) = self.getPiece(x1, y1) {
                         if *q == opponent {
-                            proceeding = true;  // 続いている
-                        }
-                        else if *q == *piece {
-                            got = true; // 囲んだ
-                        }
-                    }
-                    while proceeding {
-                        c = c + 1;
-                        x1 = x1 + dx;
-                        y1 = y1 + dy;
-                        proceeding = false;
-                        got = false;
-                        if let Some(q) = self.getPiece(x1, y1) {
-                            if *q == opponent {
-                                proceeding = true;
+                            // (dx, dy)に進めたら敵の駒があった
+                            // さらに進めて、空白になる前に自分の駒があれば、(x, y)にpieceを置ける
+                            let mut c = 1;
+                            x1 = x1 + dx;
+                            y1 = y1 + dy;
+                            let mut proceeding = false;
+                            let mut got = false;
+                            if let Some(r) = self.getPiece(x1, y1) {
+                                if *r == opponent {
+                                    proceeding = true;  // 続いている
+                                }
+                                else if *r == *piece {
+                                    got = true; // 囲んだ
+                                }
                             }
-                            else if *q == *piece {
-                                got = true;
+                            while proceeding {
+                                c = c + 1;
+                                x1 = x1 + dx;
+                                y1 = y1 + dy;
+                                proceeding = false;
+                                got = false;
+                                if let Some(r) = self.getPiece(x1, y1) {
+                                    if *r == opponent {
+                                        proceeding = true;
+                                    }
+                                    else if *r == *piece {
+                                        got = true;
+                                    }
+                                }
+                            }
+                            if got {
+                                score += c;
+                                dirs.push(dir);
                             }
                         }
-                    }
-                    if got {
-                        score += c;
-                        dirs.push(dir);
                     }
                 }
             }
         }
 
-        SearchResult1Sub { score, dirs }
-        // return SearchResult1Sub { score: score, dirs: dirs };の省略形
+        if score>0 {
+            Some(SearchResult1Sub { score, dirs })
+        } else {
+            None
+        }
     }
 
     // 駒pieceを置ける位置を探し、
@@ -260,49 +274,59 @@ impl Board {
             return results;
         }
 
-        // 相手の駒
-        let opponent = Piece::getOpponent(piece);
-
         // 置けるところがあった
         // println!("possible next moves:");
         for pi in &places {
-            // println!("({}, {})", pi.pos.x, pi.pos.y);
-            let mut newBoard = self.clone();
-            newBoard.setPiece(pi.pos.x, pi.pos.y, *piece);
-
-            // 取った駒の場所
-            let mut capturedPieceLocs = vec!();
-
-            // (pi.x, pi.y)からpi.scoreInfo.dirs方向に置ける
-            for dir in &pi.scoreInfo.dirs {
-                // println!("dir={}", dir);
-                let (dx, dy) = Pos::getDxDy(*dir);
-                let mut x1 = pi.pos.x + dx;
-                let mut y1 = pi.pos.y + dy;
-                let mut p = self.getPiece(x1, y1).unwrap(); // (x1, y1)に置けることがわかっているのでunwrapでok
-                while *p == opponent {
-                    // (x1, y1)は敵の駒だった．
-                    // (x1, y1)を自分の駒にする
-                    newBoard.setPiece(x1, y1, *piece);
-                    capturedPieceLocs.push(Pos {x: x1, y: y1});
-
-                    // さらに進める
-                    x1 = x1 + dx;
-                    y1 = y1 + dy;
-                    p = self.getPiece(x1, y1).unwrap();
-                }
-            }
-
-            results.push(SearchResult2 {
-                pos: pi.pos.clone(),
-                piece: *piece,
-                board: newBoard.clone(),
-                score: pi.scoreInfo.score,
-                capturedPieceLocs: capturedPieceLocs.clone()
-            });
+            let result = self.put(piece, &pi.pos);
+            results.push(result.unwrap());
         }
 
         return results;
+    }
+
+    // 返り値：取った駒の位置
+    pub fn put(&self, piece: &Piece, pos: &Pos) -> Option<SearchResult2> {
+        // 相手の駒
+        let opponent = Piece::getOpponent(piece);
+
+        let optRes = self.searchPosSub(piece, pos);
+        if optRes.is_none() {
+            // posには置けない
+            return None;
+        }
+        let res = optRes.unwrap();
+
+        let mut newBoard = self.clone();
+        newBoard.setPiece(pos.x, pos.y, *piece);
+
+        let mut capturedPieceLocs = vec!();
+        // (pi.x, pi.y)からres.dirs方向に置ける
+        for dir in &res.dirs {
+            // println!("dir={}", dir);
+            let (dx, dy) = Pos::getDxDy(*dir);
+            let mut x1 = pos.x + dx;
+            let mut y1 = pos.y + dy;
+            let mut p = self.getPiece(x1, y1).unwrap(); // (x1, y1)に置けることがわかっているのでunwrapでok
+            while *p == opponent {
+                // (x1, y1)は敵の駒だった．
+                // (x1, y1)を自分の駒にする
+                newBoard.setPiece(x1, y1, *piece);
+                capturedPieceLocs.push(Pos {x: x1, y: y1});
+
+                // さらに進める
+                x1 = x1 + dx;
+                y1 = y1 + dy;
+                p = self.getPiece(x1, y1).unwrap();
+            }
+        }
+
+        Some(SearchResult2 {
+            pos: pos.clone(),
+            piece: piece.clone(),
+            board: newBoard,
+            score: res.score,
+            capturedPieceLocs: capturedPieceLocs
+        })
     }
 
     pub fn genSearchTree(&self, piece: &Piece, depth: i32) -> Vec<SearchResult3> {
