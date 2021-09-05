@@ -178,9 +178,10 @@ fn game(optBoardPath: Option<String>) {
 
     let playerPiece = &board::Piece::Black;
     let computerPiece = board::Piece::getOpponent(&playerPiece);
+    let mut playerPass = false;
+    let mut computerPass = false;
 
-    let mut giveup = false;
-    while !giveup {
+    while (!playerPass) || (!computerPass) {
         // Human
         
         // 先に置ける場所があるかチェックする
@@ -192,17 +193,20 @@ fn game(optBoardPath: Option<String>) {
             }
             let playerPos = playerInput.unwrap();
     
-            println!("({}, {})", playerPos.x, playerPos.y);
+            // println!("({}, {})", playerPos.x, playerPos.y);
     
             if let Some(ret) = board.put(&playerPiece, &playerPos) {
                 board = ret.board;  // 新しい盤に更新
                 board.print();
+                board.printScore();
+                playerPass = false;
             } else {
                 println!("You cannot place on ({}, {})", playerPos.x, playerPos.y);
                 continue;
             }    
         } else {
             println!("Sorry. No place for your piece.");
+            playerPass = true;
         }
 
         // Computer
@@ -215,7 +219,7 @@ fn game(optBoardPath: Option<String>) {
         }
         println!();
 
-        let maybeResult = board.getBestMove(&computerPiece, 5);
+        let maybeResult = board.getBestMove(&computerPiece, 20);
         if let Some(result) = maybeResult {
             if result.path.len() > 0 {
                 let nextPos = &result.path[0].pos;
@@ -223,18 +227,20 @@ fn game(optBoardPath: Option<String>) {
                     println!("I put on ({}, {})", nextPos.x, nextPos.y);
                     board = ret.board;
                     board.print();
-                } else {
-                    println!("no place to move. give up!! (1)");
-                    giveup = true;
+                    board.printScore();
                 }
             } else {
-                println!("no place to move. give up!! (2)");
-                giveup = true;
+                println!("No place for me.");
+                computerPass = true;
             }
         } else {
-            println!("no result found");
+            println!("No place for me.");
+            computerPass = true;
         }
     }
+
+    println!("*** Game Over ***");
+    board.printScore();
 }
 
 fn main() {

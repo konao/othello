@@ -101,6 +101,12 @@ pub struct SearchResult3Sub {
     pub piece: Piece
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Count {
+    pub nWhitePieces: i32,
+    pub nBlackPieces: i32
+}
+
 // オセロ盤
 #[derive(Clone, Debug, PartialEq)]
 pub struct Board {
@@ -404,8 +410,8 @@ impl Board {
         if depth > 0 {
             let nextBoards = self.genNextBoard(piece);
             if nextBoards.len() == 0 {
-                println!("no next board found! for {}", piece.to_str());
-                self.print();
+                // println!("no next board found! for {}", piece.to_str());
+                // self.print();
                 results.push(SearchResult3 {
                     path: tree.path.clone(),
                     board: tree.board.clone(),
@@ -469,5 +475,36 @@ impl Board {
         }
 
         return bestMove;
+    }
+
+    pub fn getCount(&self) -> Count {
+        let mut nWhitePieces = 0;
+        let mut nBlackPieces = 0;
+
+        for y in 1..=8 {
+            for x in 1..=8 {
+                if let Some(idx) = Pos::idx(x, y) {
+                    let piece = &self.pieces[idx];
+                    match piece {
+                        Piece::White => {
+                            nWhitePieces = nWhitePieces + 1;
+                        },
+                        Piece::Black => {
+                            nBlackPieces = nBlackPieces + 1;
+                        },
+                        _ => {
+                            // do nothing
+                        }
+                    };
+                }
+            }
+        }
+
+        Count { nWhitePieces, nBlackPieces }
+    }
+
+    pub fn printScore(&self) {
+        let score = self.getCount();
+        println!("●={}, ○={}", score.nWhitePieces, score.nBlackPieces);
     }
 }
