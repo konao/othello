@@ -5,7 +5,18 @@ use std::io::*;
 use std::thread;
 use std::time;
 
-fn getUserInput() -> Option<board::Pos> {
+fn getUserInput(piece: &board::Piece) -> Option<board::Pos> {
+    match piece {
+        board::Piece::White => {
+            print!("● ");
+        },
+        board::Piece::Black => {
+            print!("○ ");
+        },
+        _ => {
+            // do nothing 
+        }
+    }
     print!("? ");
     stdout().flush().unwrap();
 
@@ -47,111 +58,194 @@ fn getUserInput() -> Option<board::Pos> {
     return None;
 }
 
-fn main() {
+fn test00() {
     let mut board = board::Board::new();
-    board.init();
+    board.init2();
     board.print();
 
-    // println!("** White **");
-    // let result = board.searchPos(&board::Piece::White);
-    // for info in result.iter() {
-    //     println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
-    // }
+    println!("** White **");
+    let result = board.searchPos(&board::Piece::White);
+    for info in result.iter() {
+        println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
+    }
 
-    // println!("** Black **");
-    // let result = board.searchPos(&board::Piece::Black);
-    // for info in result.iter() {
-    //     println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
-    // }
+    println!("** Black **");
+    let result = board.searchPos(&board::Piece::Black);
+    for info in result.iter() {
+        println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
+    }
 
-    // let mut c=0;
-    // let nextBoards = board.genNextBoard(&board::Piece::White);
-    // for nextBoard in &nextBoards {
-    //     println!("[{}] ({}, {})", c, nextBoard.pos.x, nextBoard.pos.y);
-    //     nextBoard.board.print();
-    //     c=c+1;
-    // }
+}
 
-    // let tree = board.genSearchTree(&board::Piece::White, 3);
-    // for elem in &tree {
-    //     print!("path: ");
-    //     let n = &elem.path.len();
-    //     for i in 0..*n {
-    //         let p = &elem.path[i];
-    //         print!("({}, {})", p.pos.x, p.pos.y);
-    //         if i<n-1 {
-    //             print!("-");
-    //         }
-    //     }
-    //     println!();
+fn test01() {
+    let mut board = board::Board::new();
+    board.init2();
+    board.print();
 
-    //     println!("score: {}", elem.score);
-    //     elem.board.print();
-    // }
+    let mut c=0;
+    let nextBoards = board.genNextBoard(&board::Piece::White);
+    for nextBoard in &nextBoards {
+        println!("[{}] ({}, {})", c, nextBoard.pos.x, nextBoard.pos.y);
+        nextBoard.board.print();
+        c=c+1;
+    }
+}
 
-    // let maybeResult = board.getBestMove(&board::Piece::White, 3);
-    // if let Some(result) = maybeResult {
-    //     print!("path: ");
-    //     let n = &result.path.len();
-    //     for i in 0..*n {
-    //         let p = &result.path[i];
-    //         print!("({}, {})", p.pos.x, p.pos.y);
-    //         if i<n-1 {
-    //             print!("-");
-    //         }
-    //     }
-    //     println!();
+fn test02() {
+    let mut board = board::Board::new();
+    board.init2();
+    board.print();
+
+    let tree = board.genSearchTree(&board::Piece::White, 50);
+    for elem in &tree {
+        print!("path: ");
+        let n = &elem.path.len();
+        for i in 0..*n {
+            let p = &elem.path[i];
+            print!("({}, {})", p.pos.x, p.pos.y);
+            if i<n-1 {
+                print!("-");
+            }
+        }
+        println!();
+
+        println!("score: {}", elem.score);
+        elem.board.print();
+    }
+}
+
+fn test03(optBoardPath: Option<String>) {
+    let mut board = board::Board::new();
+
+    if let Some(boardPath) = optBoardPath {
+        if !board.load(&boardPath) {
+            println!("failed to load {}", boardPath);
+            return;
+        }
+    } else {
+        board.init();
+    }
     
-    //     println!("score: {}", result.score);
-    //     result.board.print();
-    // } else {
-    //     println!("no result found");
-    // }
+    board.print();
+
+    let maybeResult = board.getBestMove(&board::Piece::White, 3);
+    if let Some(result) = maybeResult {
+        print!("path: ");
+        let n = &result.path.len();
+        for i in 0..*n {
+            let p = &result.path[i];
+            print!("({}, {})", p.pos.x, p.pos.y);
+            if i<n-1 {
+                print!("-");
+            }
+        }
+        println!();
+    
+        println!("score: {}", result.score);
+        result.board.print();
+    } else {
+        println!("no result found");
+    }
+}
+
+fn test04(optBoardPath: Option<String>) {
+    let mut board = board::Board::new();
+
+    if let Some(boardPath) = optBoardPath {
+        if !board.load(&boardPath) {
+            println!("failed to load {}", boardPath);
+            return;
+        }
+    }
+
+    board.print();
+}
+
+fn game(optBoardPath: Option<String>) {
+    let mut board = board::Board::new();
+
+    if let Some(boardPath) = optBoardPath {
+        if !board.load(&boardPath) {
+            println!("failed to load {}", boardPath);
+            return;
+        }
+    } else {
+        // なければ初期状態にする
+        board.init();
+    }
+    
+    board.print();
+
+    let playerPiece = &board::Piece::Black;
+    let computerPiece = board::Piece::getOpponent(&playerPiece);
 
     let mut giveup = false;
     while !giveup {
         // Human
-        let result = getUserInput();
-        if let Some(pos) = result {
-            println!("({}, {})", pos.x, pos.y);
-
-            if let Some(ret) = board.put(&board::Piece::Black, &pos) {
+        
+        // 先に置ける場所があるかチェックする
+        let possibleMoves = board.searchPos(&playerPiece);
+        if possibleMoves.len() > 0 {
+            let playerInput = getUserInput(&playerPiece);
+            if playerInput.is_none() {
+                continue;
+            }
+            let playerPos = playerInput.unwrap();
+    
+            println!("({}, {})", playerPos.x, playerPos.y);
+    
+            if let Some(ret) = board.put(&playerPiece, &playerPos) {
                 board = ret.board;  // 新しい盤に更新
                 board.print();
+            } else {
+                println!("You cannot place on ({}, {})", playerPos.x, playerPos.y);
+                continue;
+            }    
+        } else {
+            println!("Sorry. No place for your piece.");
+        }
 
-                // Computer
-                print!("Hmm ");
-                stdout().flush().unwrap();
-                for _ in 0..6 {
-                    thread::sleep(time::Duration::from_secs_f64(0.5));
-                    print!(".");
-                    stdout().flush().unwrap();
-                }
-                println!();
+        // Computer
+        print!("Hmm ");
+        stdout().flush().unwrap();
+        for _ in 0..6 {
+            thread::sleep(time::Duration::from_secs_f64(0.5));
+            print!(".");
+            stdout().flush().unwrap();
+        }
+        println!();
 
-                let maybeResult = board.getBestMove(&board::Piece::White, 5);
-                if let Some(result) = maybeResult {
-                    if result.path.len() > 0 {
-                        let nextPos = &result.path[0].pos;
-                        if let Some(ret) = board.put(&board::Piece::White, nextPos) {
-                            println!("I put on ({}, {})", nextPos.x, nextPos.y);
-                            board = ret.board;
-                            board.print();
-                        } else {
-                            println!("no place to move. give up!! (1)");
-                            giveup = true;
-                        }
-                    } else {
-                        println!("no place to move. give up!! (2)");
-                        giveup = true;
-                    }
+        let maybeResult = board.getBestMove(&computerPiece, 5);
+        if let Some(result) = maybeResult {
+            if result.path.len() > 0 {
+                let nextPos = &result.path[0].pos;
+                if let Some(ret) = board.put(&computerPiece, nextPos) {
+                    println!("I put on ({}, {})", nextPos.x, nextPos.y);
+                    board = ret.board;
+                    board.print();
                 } else {
-                    println!("no result found");
+                    println!("no place to move. give up!! (1)");
+                    giveup = true;
                 }
             } else {
-                println!("You cannot place on ({}, {})", pos.x, pos.y);
+                println!("no place to move. give up!! (2)");
+                giveup = true;
             }
+        } else {
+            println!("no result found");
         }
     }
 }
-    
+
+fn main() {
+    let mut optBoardPath: Option<String> = None;
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() >= 2 {
+        optBoardPath = Some(args[1].to_string());
+    }
+
+    // test02();
+    // test03(optBoardPath);
+    // test04(optBoardPath);
+    game(optBoardPath);
+}

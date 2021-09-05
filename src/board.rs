@@ -1,5 +1,8 @@
 #![allow(non_snake_case)]
 
+use std::io::{BufRead, BufReader};
+use std::fs::File;
+
 // 駒
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Piece {
@@ -14,6 +17,14 @@ impl Piece {
             Piece::Space => Piece::Space,
             Piece::White => Piece::Black,
             Piece::Black => Piece::White
+        };
+    }
+
+    pub fn to_str(&self) -> &str {
+        return match &self {
+            Piece::Space => "Space",
+            Piece::White => "Black",
+            Piece::Black => "White"
         };
     }
 }
@@ -122,15 +133,17 @@ impl Board {
                 if let Some(idx) = Pos::idx(x, y) {
                     let piece = &self.pieces[idx];
                     let pstr = match piece {
-                        Piece::White => "○",
-                        Piece::Black => "●",
+                        Piece::White => "●",
+                        Piece::Black => "○",
                         _ => "・"
                     };
                     print!("{}", pstr);    
                 }
             }
-            println!();
+            println!("|{}", y);
         }
+        println!(" -----------------");
+        println!("   A B C D E F G H");
     }
 
     // 初期状態にする
@@ -150,6 +163,48 @@ impl Board {
         self.setPiece(6, 6, Piece::White);
     }
 
+    pub fn load(&mut self, boardPath: &str) -> bool {
+        if let Some(lines) = self.readTextFile(boardPath).ok() {
+            for i in 2..10 {
+                let line = lines[i].chars().collect::<Vec<char>>();
+                for j in 2..10 {
+                    let ch = line[j];
+                    let piece = match ch {
+                        '●' => Piece::White,
+                        '○' => Piece::Black,
+                        _ => Piece::Space
+                    };
+                    let x = (j-1) as i32;
+                    let y = (i-1) as i32;
+                    self.setPiece(x, y, piece);
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    // ------------------------------------------------
+    // テキストファイルを読み込んで文字列ベクトルで返す
+    //
+    // @param fname 読み込むファイル
+    //
+    // @return Result<Vec<String>> 各行の内容
+    // ------------------------------------------------
+    pub fn readTextFile(&self, fname: &str) -> std::io::Result<Vec<String>> {
+        let f = File::open(fname)?;
+        let reader = BufReader::new(f);
+    
+        let mut lines = Vec::<String>::new();
+    
+        for line in reader.lines() {
+            lines.push(line.unwrap());
+        }
+    
+        Ok(lines)
+    }
+    
     pub fn setPiece(&mut self, x: i32, y: i32, piece: Piece) -> () {
         if let Some(idx) = Pos::idx(x, y) {
             self.pieces[idx] = piece;
@@ -284,7 +339,12 @@ impl Board {
         return results;
     }
 
-    // 返り値：取った駒の位置
+    // 駒を指定位置に置く
+    // 囲まれた駒は反転され、新しい盤が返ってくる
+    // 指定位置に置けない場合はNoneが返る
+    //
+    // @param piece [i] 駒
+    // @param pos [i] 位置
     pub fn put(&self, piece: &Piece, pos: &Pos) -> Option<SearchResult2> {
         // 相手の駒
         let opponent = Piece::getOpponent(piece);
@@ -343,6 +403,17 @@ impl Board {
 
         if depth > 0 {
             let nextBoards = self.genNextBoard(piece);
+            if nextBoards.len() == 0 {
+                println!("no next board found! for {}", piece.to_str());
+                self.print();
+                results.push(SearchResult3 {
+                    path: tree.path.clone(),
+                    board: tree.board.clone(),
+                    score: tree.score
+                });
+                return results;
+            }
+
             for nextBoard in &nextBoards {
                 let mut newPath = tree.path.clone();
                 newPath.push(SearchResult3Sub {
@@ -389,7 +460,7 @@ impl Board {
         let mut bestMove = None;
 
         let allMoves = self.genSearchTree(piece, depth);
-        let mut bestScore = -1;
+        let mut bestScore = std::i32::MIN;
         for m in &allMoves {
             if m.score > bestScore {
                 bestScore = m.score;
