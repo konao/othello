@@ -64,6 +64,21 @@ impl Pos {
             _ => (0, 0)
         };
     }
+
+    pub fn toDesc(x: i32, y: i32) -> String {
+        let xstr = match x {
+            1 => "A",
+            2 => "B",
+            3 => "C",
+            4 => "D",
+            5 => "E",
+            6 => "F",
+            7 => "G",
+            8 => "H",
+            _ => " "
+        };
+        return format!("{}{}", xstr, y);
+    }
 }
 
 // 探索結果を表す構造体
@@ -370,14 +385,13 @@ impl Board {
     // 駒pieceを置ける位置を探し、
     // そこに置いた場合の新しい盤のリストを返す
     //
-    // 返り値のu8はスコア(score)
+    // 返り値のスコア(score)は
     // pieceにとっての得点．
-    // score=1 --> pieceが1個増える
     //
     // scoreは負の値になることもある．
     // pieceにとって不利になる場合に置いた場合（例：四隅の斜め隣りに置いた場合など）
     //
-    // 返り値の[Pos]はひっくり返された駒の位置（アニメーション用）
+    // 返り値のcapturedPieceLocsはひっくり返された駒の位置（アニメーション用）
     pub fn genNextBoard(&self, piece: &Piece) -> Vec<SearchResult2> {
 
         // 現在のボードに、pieceを置ける場所を探す
@@ -392,9 +406,11 @@ impl Board {
         // 置けるところがあった
         // println!("possible next moves:");
         for pi in &places {
+            // println!("{}", Pos::toDesc(pi.pos.x, pi.pos.y));
             let result = self.put(piece, &pi.pos);
             results.push(result.unwrap());
         }
+        // println!("done");
 
         return results;
     }
@@ -478,6 +494,11 @@ impl Board {
             }
 
             for nextBoard in &nextBoards {
+                let np = nextBoard.pos.clone();
+                // for _ in 0..depth {
+                //     print!(" ");
+                // }
+                // println!("{}", Pos::toDesc(np.x, np.y));
                 let mut newPath = tree.path.clone();
                 newPath.push(SearchResult3Sub {
                     pos: nextBoard.pos,
@@ -504,12 +525,15 @@ impl Board {
                         ntake: newNtake,
                         score: newScore
                     };
-                    return nextBoard.board.genSearchTreeSub(
+                    let childResults = nextBoard.board.genSearchTreeSub(
                         origPiece,
                         &Piece::getOpponent(piece),
                         newDepth,
                         &newTree
                     );
+                    for childResult in &childResults {
+                        results.push(childResult.clone());
+                    }
                 } else {
                     results.push(SearchResult3 {
                         path: newPath,
@@ -528,9 +552,18 @@ impl Board {
         let mut bestMove = None;
 
         let allMoves = self.genSearchTree(piece, depth);
+        println!("{} moves", allMoves.len());
         let mut bestScore = std::i32::MIN;
         for m in &allMoves {
-            println!("score({}, {})={}", m.path[0].pos.x, m.path[0].pos.y, m.score);
+            // let n = m.path.len();
+            // for i in 0..n {
+            //     print!("{}", Pos::toDesc(m.path[i].pos.x, m.path[i].pos.y));
+            //     if i<n-1 {
+            //         print!("-");
+            //     }
+            // }
+            // println!(" score:{}", m.score);
+
             if m.score > bestScore {
                 bestScore = m.score;
                 bestMove = Some(m.clone());

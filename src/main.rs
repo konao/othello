@@ -58,21 +58,31 @@ fn getUserInput(piece: &board::Piece) -> Option<board::Pos> {
     return None;
 }
 
-fn test00() {
+fn test00(optBoardPath: Option<String>) {
     let mut board = board::Board::new();
-    board.init2();
+
+    if let Some(boardPath) = optBoardPath {
+        if !board.load(&boardPath) {
+            println!("failed to load {}", boardPath);
+            return;
+        }
+    } else {
+        // なければ初期状態にする
+        board.init();
+    }
+    
     board.print();
 
     println!("** White **");
     let result = board.searchPos(&board::Piece::White);
     for info in result.iter() {
-        println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
+        println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.scoreInfo.score);
     }
 
     println!("** Black **");
     let result = board.searchPos(&board::Piece::Black);
     for info in result.iter() {
-        println!("({}, {}) = {}", info.pos.x, info.pos.y, info.scoreInfo.score);
+        println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.scoreInfo.score);
     }
 
 }
@@ -182,6 +192,10 @@ fn test04(optBoardPath: Option<String>) {
 }
 
 fn game(optBoardPath: Option<String>) {
+    println!("***************************");
+    println!("  Othello Game (ver 0.1)");
+    println!("***************************");
+
     let mut board = board::Board::new();
 
     if let Some(boardPath) = optBoardPath {
@@ -221,7 +235,7 @@ fn game(optBoardPath: Option<String>) {
                 board.printScore();
                 playerPass = false;
             } else {
-                println!("You cannot place on ({}, {})", playerPos.x, playerPos.y);
+                println!("You cannot place on {}", board::Pos::toDesc(playerPos.x, playerPos.y));
                 continue;
             }    
         } else {
@@ -230,23 +244,23 @@ fn game(optBoardPath: Option<String>) {
         }
 
         // Computer
-        print!("Hmm ");
-        stdout().flush().unwrap();
-        for _ in 0..6 {
-            thread::sleep(time::Duration::from_secs_f64(0.5));
-            print!(".");
-            stdout().flush().unwrap();
-        }
-        println!();
+        println!("Hmm ... ");
+        // stdout().flush().unwrap();
+        // for _ in 0..6 {
+        //     thread::sleep(time::Duration::from_secs_f64(0.5));
+        //     print!(".");
+        //     stdout().flush().unwrap();
+        // }
+        // println!();
 
-        let maybeResult = board.getBestMove(&computerPiece, 20);
+        let maybeResult = board.getBestMove(&computerPiece, 5);
         if let Some(result) = maybeResult {
             if result.path.len() > 0 {
                 let nextPos = &result.path[0].pos;
                 if let Some(ret) = board.put(&computerPiece, nextPos) {
-                    println!("I put on ({}, {})", nextPos.x, nextPos.y);
                     board = ret.board;
                     board.print();
+                    println!("I put on {}", board::Pos::toDesc(nextPos.x, nextPos.y));
                     board.printScore();
                 }
             } else {
@@ -270,10 +284,11 @@ fn main() {
         optBoardPath = Some(args[1].to_string());
     }
 
+    // test00(optBoardPath);
     // test01(optBoardPath);
-    test02(optBoardPath);
+    // test02(optBoardPath);
     // test03(optBoardPath);
     // test04(optBoardPath);
 
-    // game(optBoardPath);
+    game(optBoardPath);
 }
