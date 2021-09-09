@@ -77,26 +77,46 @@ fn test00() {
 
 }
 
-fn test01() {
+fn test01(optBoardPath: Option<String>) {
     let mut board = board::Board::new();
-    board.init2();
+
+    if let Some(boardPath) = optBoardPath {
+        if !board.load(&boardPath) {
+            println!("failed to load {}", boardPath);
+            return;
+        }
+    } else {
+        // なければ初期状態にする
+        board.init();
+    }
+    
     board.print();
 
     let mut c=0;
     let nextBoards = board.genNextBoard(&board::Piece::White);
     for nextBoard in &nextBoards {
-        println!("[{}] ({}, {})", c, nextBoard.pos.x, nextBoard.pos.y);
+        println!("[{}] ({}, {}) : ntake={}, score={}", c, nextBoard.pos.x, nextBoard.pos.y, nextBoard.ntake, nextBoard.score);
         nextBoard.board.print();
         c=c+1;
     }
 }
 
-fn test02() {
+fn test02(optBoardPath: Option<String>) {
     let mut board = board::Board::new();
-    board.init2();
+
+    if let Some(boardPath) = optBoardPath {
+        if !board.load(&boardPath) {
+            println!("failed to load {}", boardPath);
+            return;
+        }
+    } else {
+        // なければ初期状態にする
+        board.init();
+    }
+    
     board.print();
 
-    let tree = board.genSearchTree(&board::Piece::White, 50);
+    let tree = board.genSearchTree(&board::Piece::White, 1);
     for elem in &tree {
         print!("path: ");
         let n = &elem.path.len();
@@ -250,8 +270,10 @@ fn main() {
         optBoardPath = Some(args[1].to_string());
     }
 
-    // test02();
+    // test01(optBoardPath);
+    test02(optBoardPath);
     // test03(optBoardPath);
     // test04(optBoardPath);
-    game(optBoardPath);
+
+    // game(optBoardPath);
 }

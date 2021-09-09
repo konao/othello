@@ -75,15 +75,17 @@ pub struct SearchResult1 {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SearchResult1Sub {
-    pub score: i32,
+    pub ntake: i32, // 取った駒の数
+    pub score: i32, // スコア（取った駒の位置を考慮した点数）
     pub dirs: Vec<i32>  // 相手の駒を取れる方向
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SearchResult2 {
     pub pos: Pos,   // posに
-    pub piece: Piece,   // pieceを置いたら
+    pub piece: Piece,   // このpieceを置いたら
     pub board: Board,   // このボードになる
+    pub ntake: i32,
     pub score: i32,
     pub capturedPieceLocs: Vec<Pos>
 }
@@ -92,6 +94,7 @@ pub struct SearchResult2 {
 pub struct SearchResult3 {
     pub path: Vec<SearchResult3Sub>,  // 駒を置いたパス
     pub board: Board,   // pathに置いた結果
+    pub ntake: i32,
     pub score: i32
 }
 
@@ -110,22 +113,56 @@ pub struct Count {
 // オセロ盤
 #[derive(Clone, Debug, PartialEq)]
 pub struct Board {
-    pieces: Vec<Piece>
+    pieces: Vec<Piece>,
+    coefs: Vec<i32>
 }
 
 impl Board {
     // 空のボードを作る
     pub fn new() -> Self {
         let mut pieces = Vec::<Piece>::new();
-
         for _y in 1..=8 {
             for _x in 1..=8 {
                 pieces.push(Piece::Space);
             }
         }
 
+        let mut coefs = Vec::<i32>::new();
+        for _y in 1..=8 {
+            for _x in 1..=8 {
+                let mut c = 1;
+                if 
+                    ((_x == 1) && (_y == 1)) ||
+                    ((_x == 8) && (_y == 1)) ||
+                    ((_x == 1) && (_y == 8)) ||
+                    ((_x == 8) && (_y == 8)) {
+                        // 4隅はスコアを上げる
+                        c = 12;
+                }
+                else if
+                    ((_x == 2) && (_y == 1)) ||
+                    ((_x == 1) && (_y == 2)) ||
+                    ((_x == 2) && (_y == 2)) ||
+                    ((_x == 7) && (_y == 1)) ||
+                    ((_x == 8) && (_y == 2)) ||
+                    ((_x == 7) && (_y == 2)) ||
+                    ((_x == 1) && (_y == 7)) ||
+                    ((_x == 2) && (_y == 8)) ||
+                    ((_x == 2) && (_y == 7)) ||
+                    ((_x == 8) && (_y == 7)) ||
+                    ((_x == 7) && (_y == 8)) ||
+                    ((_x == 7) && (_y == 7)) {
+                        // 4隅の隣はスコアを下げる
+                        c = -4;
+                }
+
+                coefs.push(c);
+            }
+        }
+
         return Board {
-            pieces: pieces
+            pieces: pieces,
+            coefs: coefs
         };
     }
 
@@ -225,6 +262,14 @@ impl Board {
         }
     }
 
+    pub fn getCoef(&self, x: i32, y: i32) -> i32 {
+        if let Some(idx) = Pos::idx(x, y) {
+            return self.coefs[idx];
+        } else {
+            return 0;
+        }
+    }
+
     // pieceが次に置ける場所を探す
     pub fn searchPos(&self, piece: &Piece) -> Vec<SearchResult1> {
         let mut result = Vec::new();
@@ -233,7 +278,7 @@ impl Board {
                 if let Some(p) = self.getPiece(x, y) {
                     if *p == Piece::Space {
                         if let Some(res) = self.searchPosSub(piece, &Pos{x, y}) {
-                            if res.score>0 {
+                            if res.ntake>0 {
                                 let info = SearchResult1 {
                                     pos: Pos { x, y },
                                     scoreInfo: res
@@ -255,6 +300,7 @@ impl Board {
     // @return posにpieceを置けない場合はNoneが返る
     pub fn searchPosSub(&self, piece: &Piece, pos: &Pos) -> Option<SearchResult1Sub> {
         let opponent = Piece::getOpponent(piece);
+        let mut ntake = 0;
         let mut score = 0;
         let mut dirs = vec!();
 
@@ -268,7 +314,10 @@ impl Board {
                         if *q == opponent {
                             // (dx, dy)に進めたら敵の駒があった
                             // さらに進めて、空白になる前に自分の駒があれば、(x, y)にpieceを置ける
-                            let mut c = 1;
+                            let mut n = 1;
+                            let mut c = self.getCoef(x1, y1);
+
+                            // さらに進める
                             x1 = x1 + dx;
                             y1 = y1 + dy;
                             let mut proceeding = false;
@@ -282,7 +331,9 @@ impl Board {
                                 }
                             }
                             while proceeding {
-                                c = c + 1;
+                                n = n + 1;
+                                c = c + self.getCoef(x1, y1);
+
                                 x1 = x1 + dx;
                                 y1 = y1 + dy;
                                 proceeding = false;
@@ -297,7 +348,9 @@ impl Board {
                                 }
                             }
                             if got {
-                                score += c;
+                                // 囲んだ
+                                ntake = ntake + n;
+                                score = score + c;
                                 dirs.push(dir);
                             }
                         }
@@ -306,8 +359,9 @@ impl Board {
             }
         }
 
-        if score>0 {
-            Some(SearchResult1Sub { score, dirs })
+        if ntake>0 {
+            score += self.getCoef(pos.x, pos.y);
+            Some(SearchResult1Sub { ntake, score, dirs })
         } else {
             None
         }
@@ -390,6 +444,7 @@ impl Board {
             pos: pos.clone(),
             piece: piece.clone(),
             board: newBoard,
+            ntake: res.ntake,
             score: res.score,
             capturedPieceLocs: capturedPieceLocs
         })
@@ -399,6 +454,7 @@ impl Board {
         let root = SearchResult3 {
             path: vec!(),
             board: self.clone(),
+            ntake: 0,
             score: 0
         };
         return self.genSearchTreeSub(piece, piece, depth, &root);
@@ -415,6 +471,7 @@ impl Board {
                 results.push(SearchResult3 {
                     path: tree.path.clone(),
                     board: tree.board.clone(),
+                    ntake: tree.ntake,
                     score: tree.score
                 });
                 return results;
@@ -427,12 +484,15 @@ impl Board {
                     piece: *piece
                 });
 
+                let mut newNtake = tree.ntake;
                 let mut newScore = tree.score;
                 if piece == origPiece {
                     // pieceは自分の駒
+                    newNtake += nextBoard.ntake;
                     newScore += nextBoard.score;
                 } else {
                     // pieceは敵の駒
+                    newNtake -= nextBoard.ntake;
                     newScore -= nextBoard.score;
                 }
 
@@ -441,6 +501,7 @@ impl Board {
                     let newTree = SearchResult3 {
                         path: newPath,
                         board: nextBoard.board.clone(),
+                        ntake: newNtake,
                         score: newScore
                     };
                     return nextBoard.board.genSearchTreeSub(
@@ -453,6 +514,7 @@ impl Board {
                     results.push(SearchResult3 {
                         path: newPath,
                         board: nextBoard.board.clone(),
+                        ntake: newNtake,
                         score: newScore
                     })
                 }
@@ -468,6 +530,7 @@ impl Board {
         let allMoves = self.genSearchTree(piece, depth);
         let mut bestScore = std::i32::MIN;
         for m in &allMoves {
+            println!("score({}, {})={}", m.path[0].pos.x, m.path[0].pos.y, m.score);
             if m.score > bestScore {
                 bestScore = m.score;
                 bestMove = Some(m.clone());
