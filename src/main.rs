@@ -192,8 +192,10 @@ fn test04(optBoardPath: Option<String>) {
 }
 
 fn game(optBoardPath: Option<String>) {
+    let VERSION = 0.2;
+    
     println!("***************************");
-    println!("  Othello Game (ver 0.1)");
+    println!("  Othello Game (ver {})", VERSION);
     println!("***************************");
 
     let mut board = board::Board::new();
