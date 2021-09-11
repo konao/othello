@@ -12,5 +12,4 @@ edition = "2018"
 sdl2 = "0.30.0"
 
 [features]
-default = ["sdl2/image"]
-
+default = ["sdl2/image", "sdl2/ttf"]

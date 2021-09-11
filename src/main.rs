@@ -5,11 +5,10 @@ use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::rect::Rect;
-use sdl2::render::TextureCreator;
 use sdl2::image::LoadTexture;
-use sdl2::video::Window;
-use sdl2::render::Canvas;
-use sdl2::render::Texture;
+use sdl2::video::{Window, WindowContext};
+use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::ttf::Font;
 
 use std::io::*;
 use std::thread;
@@ -17,6 +16,7 @@ use std::time;
 use std::time::Duration;
 
 use othello::board;
+use othello::Util;
 
 fn getUserInput(piece: &board::Piece) -> Option<board::Pos> {
     match piece {
@@ -204,7 +204,17 @@ fn test04(optBoardPath: Option<String>) {
     board.print();
 }
 
-fn drawBoard(canvas: &mut Canvas<Window>, texture: &Texture, board: &board::Board) -> () {
+fn drawBoard<'a>(
+    canvas: &mut Canvas<Window>,
+    texture: &Texture,
+    font: &Font,
+    texture_creator: &'a TextureCreator<WindowContext>,
+    board: &board::Board) -> () 
+{
+    let lm = 32;    // left margin
+    let tm = 32;    // top margin
+    let ps = 96;    // piece size
+
     for _y in 1..=8 {
         for _x in 1..=8 {
             let optPiece = board.getPiece(_x, _y);
@@ -221,17 +231,31 @@ fn drawBoard(canvas: &mut Canvas<Window>, texture: &Texture, board: &board::Boar
                         src = Rect::new(0, 0, 96, 96);
                     }
                 }
-                let dest: Rect = Rect::new((_x-1)*96+32, (_y-1)*96+32, 96, 96);
+                let dest: Rect = Rect::new((_x-1)*96+lm, (_y-1)*96+tm, 96, 96);
                 canvas.copy(texture, Some(src), Some(dest)).expect("copy texture to canvas failed");
             }
         }
+    }
+
+    let wl = 16;    // font width
+    let hl = 24;    // font height
+    let xChars = ["A", "B", "C", "D", "E", "F", "G", "H"];
+    for i in 0..xChars.len() {
+        let x = (i*ps + (ps/2)) as i32 + lm - 2;
+        Util::textOut(canvas, &font, &texture_creator, xChars[i], 255, 255, 255, x, 5, wl, hl);
+        Util::textOut(canvas, &font, &texture_creator, xChars[i], 255, 255, 255, x, (ps as i32) * 8 + (tm as i32) + 2, wl, hl);
+    }
+    for i in 0..8 {
+        let y = (i*ps + (ps/2)) as i32 + tm - 4;
+        Util::textOut(canvas, &font, &texture_creator, &((i+1) as i32).to_string(), 255, 255, 255, 8, y, wl, hl);
+        Util::textOut(canvas, &font, &texture_creator, &((i+1) as i32).to_string(), 255, 255, 255, 8 + (ps as i32) * 8 + (tm - 2) as i32, y, wl, hl);
     }
 
     canvas.present();
 }
 
 fn game(optBoardPath: Option<String>) {
-    let VERSION = 0.2;
+    let VERSION = 0.3;
     let title = format!("*** Othello (ver {}) ***", VERSION);
     
     let sdl2_context = sdl2::init().unwrap();
@@ -250,6 +274,10 @@ fn game(optBoardPath: Option<String>) {
     let texture_creator: TextureCreator<_> = canvas.texture_creator();
     let image_texture = texture_creator.load_texture("assets/Image1.png").expect("load image failed");
 
+    // init font stuff
+    let ttf_context = sdl2::ttf::init().expect("failed to init SDL TTF");
+    let font = ttf_context.load_font("assets/arial.ttf", 128).expect("failed to load font");
+    
     // clear canvas
     canvas.set_draw_color(Color::RGB(0, 0, 0)); // black
     canvas.clear();
@@ -291,7 +319,7 @@ fn game(optBoardPath: Option<String>) {
             }
         }
 
-        drawBoard(&mut canvas, &image_texture, &board);
+        drawBoard(&mut canvas, &image_texture, &font, &texture_creator, &board);
         
         if (!playerPass) || (!computerPass) {
             // Human
@@ -311,7 +339,7 @@ fn game(optBoardPath: Option<String>) {
                     board = ret.board;  // 新しい盤に更新
                     board.print();
                     board.printScore();
-                    drawBoard(&mut canvas, &image_texture, &board);
+                    drawBoard(&mut canvas, &image_texture, &font, &texture_creator, &board);
                     playerPass = false;
                 } else {
                     println!("You cannot place on {}", board::Pos::toDesc(playerPos.x, playerPos.y));
@@ -321,10 +349,10 @@ fn game(optBoardPath: Option<String>) {
                 println!("Sorry. No place for your piece.");
                 playerPass = true;
             }
-
+    
             // Computer
             println!("Hmm ... ");
-            // stdout().flush().unwrap();
+            stdout().flush().unwrap();
             // for _ in 0..6 {
             //     thread::sleep(time::Duration::from_secs_f64(0.5));
             //     print!(".");
@@ -341,7 +369,7 @@ fn game(optBoardPath: Option<String>) {
                         board.print();
                         println!("I put on {}", board::Pos::toDesc(nextPos.x, nextPos.y));
                         board.printScore();
-                        drawBoard(&mut canvas, &image_texture, &board);
+                        drawBoard(&mut canvas, &image_texture, &font, &texture_creator, &board);
                     }
                 } else {
                     println!("No place for me.");
