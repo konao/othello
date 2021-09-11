@@ -76,13 +76,13 @@ fn test00(optBoardPath: Option<String>) {
     println!("** White **");
     let result = board.searchPos(&board::Piece::White);
     for info in result.iter() {
-        println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.scoreInfo.score);
+        println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.score);
     }
 
     println!("** Black **");
     let result = board.searchPos(&board::Piece::Black);
     for info in result.iter() {
-        println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.scoreInfo.score);
+        println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.score);
     }
 
 }
@@ -253,7 +253,7 @@ fn game(optBoardPath: Option<String>) {
         // }
         // println!();
 
-        let maybeResult = board.getBestMove(&computerPiece, 5);
+        let maybeResult = board.getBestMove(&computerPiece, 12);
         if let Some(result) = maybeResult {
             if result.path.len() > 0 {
                 let nextPos = &result.path[0].pos;

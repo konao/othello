@@ -85,13 +85,8 @@ impl Pos {
 #[derive(Clone, Debug, PartialEq)]
 pub struct SearchResult1 {
     pub pos: Pos,   // 置ける位置
-    pub scoreInfo: SearchResult1Sub    // posに置いたときに取れる駒の個数と方向
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct SearchResult1Sub {
-    pub ntake: i32, // 取った駒の数
-    pub score: i32, // スコア（取った駒の位置を考慮した点数）
+    pub ntake: i32, // 取れる駒の数
+    pub score: i32, // スコア（値が大きいほど有利）
     pub dirs: Vec<i32>  // 相手の駒を取れる方向
 }
 
@@ -293,13 +288,7 @@ impl Board {
                 if let Some(p) = self.getPiece(x, y) {
                     if *p == Piece::Space {
                         if let Some(res) = self.searchPosSub(piece, &Pos{x, y}) {
-                            if res.ntake>0 {
-                                let info = SearchResult1 {
-                                    pos: Pos { x, y },
-                                    scoreInfo: res
-                                };
-                                result.push(info);
-                            }
+                            result.push(res);
                         }
                     }
                 }
@@ -313,7 +302,7 @@ impl Board {
     // @param pos [i] 置く位置
     //
     // @return posにpieceを置けない場合はNoneが返る
-    pub fn searchPosSub(&self, piece: &Piece, pos: &Pos) -> Option<SearchResult1Sub> {
+    pub fn searchPosSub(&self, piece: &Piece, pos: &Pos) -> Option<SearchResult1> {
         let opponent = Piece::getOpponent(piece);
         let mut ntake = 0;
         let mut score = 0;
@@ -376,7 +365,12 @@ impl Board {
 
         if ntake>0 {
             score += self.getCoef(pos.x, pos.y);
-            Some(SearchResult1Sub { ntake, score, dirs })
+            Some(SearchResult1 { 
+                pos: pos.clone(),
+                ntake: ntake, 
+                score: score, 
+                dirs: dirs 
+            })
         } else {
             None
         }
@@ -404,11 +398,14 @@ impl Board {
         }
 
         // 置けるところがあった
-        // println!("possible next moves:");
+        // println!("possible next moves for {}:", piece.to_str());
         for pi in &places {
-            // println!("{}", Pos::toDesc(pi.pos.x, pi.pos.y));
-            let result = self.put(piece, &pi.pos);
-            results.push(result.unwrap());
+            let optResult = self.put(piece, &pi.pos);
+            let freedom = places.len() as i32; // 自由度（置ける場所の数）大きいほど有利
+            let mut result = optResult.unwrap();
+            result.score *= freedom;
+            // println!("{} score:{}", Pos::toDesc(pi.pos.x, pi.pos.y), result.score);
+            results.push(result);
         }
         // println!("done");
 
@@ -480,7 +477,7 @@ impl Board {
         let mut results = vec!();
 
         if depth > 0 {
-            let nextBoards = self.genNextBoard(piece);
+            let nextBoards: Vec<SearchResult2> = self.genNextBoard(piece);
             if nextBoards.len() == 0 {
                 // println!("no next board found! for {}", piece.to_str());
                 // self.print();
@@ -493,7 +490,17 @@ impl Board {
                 return results;
             }
 
-            for nextBoard in &nextBoards {
+            // nextBoardsから最もスコアの高いものを選び出す（複数個あり得る）
+            let maxScore = nextBoards.iter().max_by_key(|&elem| elem.score).unwrap().score;
+            let maxScoreBoards = nextBoards.iter().filter_map(
+                |elem| if elem.score == maxScore {
+                    return Some(elem);
+                } else {
+                    return None;
+                }
+            );
+
+            for nextBoard in maxScoreBoards {   // ここで&maxScoreBoardsにできないのはなぜ？
                 let np = nextBoard.pos.clone();
                 // for _ in 0..depth {
                 //     print!(" ");
@@ -551,7 +558,7 @@ impl Board {
     pub fn getBestMove(&self, piece: &Piece, depth: i32) -> Option<SearchResult3> {
         let mut bestMove = None;
 
-        let allMoves = self.genSearchTree(piece, depth);
+        let allMoves: Vec<SearchResult3> = self.genSearchTree(piece, depth);
         println!("{} moves", allMoves.len());
         let mut bestScore = std::i32::MIN;
         for m in &allMoves {
