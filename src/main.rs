@@ -231,13 +231,16 @@ fn drawBoard(canvas: &mut Canvas<Window>, texture: &Texture, board: &board::Boar
 }
 
 fn game(optBoardPath: Option<String>) {
+    let VERSION = 0.2;
+    let title = format!("*** Othello (ver {}) ***", VERSION);
+    
     let sdl2_context = sdl2::init().unwrap();
     let video_subsystem = sdl2_context.video().unwrap();
 
     let width: u32 = 960;
     let height: u32 = 832;
     let window = video_subsystem
-        .window("SDL", width, height)
+        .window(&title, width, height)
         .position_centered()
         .build()
         .unwrap();
@@ -251,8 +254,6 @@ fn game(optBoardPath: Option<String>) {
     canvas.set_draw_color(Color::RGB(0, 0, 0)); // black
     canvas.clear();
     canvas.present();
-    
-    let VERSION = 0.2;
     
     println!("***************************");
     println!("  Othello Game (ver {})", VERSION);
@@ -271,7 +272,6 @@ fn game(optBoardPath: Option<String>) {
     }
 
     board.print();
-    drawBoard(&mut canvas, &image_texture, &board);
 
     let playerPiece = &board::Piece::Black;
     let computerPiece = board::Piece::getOpponent(&playerPiece);
@@ -290,6 +290,8 @@ fn game(optBoardPath: Option<String>) {
                 _ => {}
             }
         }
+
+        drawBoard(&mut canvas, &image_texture, &board);
         
         if (!playerPass) || (!computerPass) {
             // Human
