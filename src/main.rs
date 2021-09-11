@@ -1,9 +1,22 @@
 #![allow(non_snake_case)]
+extern crate sdl2;
 
-use othello::board;
+use sdl2::pixels::Color;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+use sdl2::rect::Rect;
+use sdl2::render::TextureCreator;
+use sdl2::image::LoadTexture;
+use sdl2::video::Window;
+use sdl2::render::Canvas;
+use sdl2::render::Texture;
+
 use std::io::*;
 use std::thread;
 use std::time;
+use std::time::Duration;
+
+use othello::board;
 
 fn getUserInput(piece: &board::Piece) -> Option<board::Pos> {
     match piece {
@@ -191,7 +204,54 @@ fn test04(optBoardPath: Option<String>) {
     board.print();
 }
 
+fn drawBoard(canvas: &mut Canvas<Window>, texture: &Texture, board: &board::Board) -> () {
+    for _y in 1..=8 {
+        for _x in 1..=8 {
+            let optPiece = board.getPiece(_x, _y);
+            if let Some(piece) = optPiece {
+                let src: Rect;
+                match piece {
+                    &board::Piece::White => {
+                        src = Rect::new(192, 0, 96, 96);
+                    },
+                    &board::Piece::Black => {
+                        src = Rect::new(96, 0, 96, 96);
+                    },
+                    &board::Piece::Space => {
+                        src = Rect::new(0, 0, 96, 96);
+                    }
+                }
+                let dest: Rect = Rect::new((_x-1)*96+32, (_y-1)*96+32, 96, 96);
+                canvas.copy(texture, Some(src), Some(dest)).expect("copy texture to canvas failed");
+            }
+        }
+    }
+
+    canvas.present();
+}
+
 fn game(optBoardPath: Option<String>) {
+    let sdl2_context = sdl2::init().unwrap();
+    let video_subsystem = sdl2_context.video().unwrap();
+
+    let width: u32 = 960;
+    let height: u32 = 832;
+    let window = video_subsystem
+        .window("SDL", width, height)
+        .position_centered()
+        .build()
+        .unwrap();
+
+    let mut canvas = window.into_canvas().build().unwrap();
+
+    let texture_creator: TextureCreator<_> = canvas.texture_creator();
+    let image_texture = texture_creator.load_texture("assets/Image1.png").expect("load image failed");
+
+    // clear canvas
+    canvas.set_draw_color(Color::RGB(0, 0, 0)); // black
+    canvas.clear();
+    canvas.present();
+    
     let VERSION = 0.2;
     
     println!("***************************");
@@ -209,74 +269,94 @@ fn game(optBoardPath: Option<String>) {
         // なければ初期状態にする
         board.init();
     }
-    
+
     board.print();
+    drawBoard(&mut canvas, &image_texture, &board);
 
     let playerPiece = &board::Piece::Black;
     let computerPiece = board::Piece::getOpponent(&playerPiece);
     let mut playerPass = false;
     let mut computerPass = false;
+    let mut bFirst = true;
 
-    while (!playerPass) || (!computerPass) {
-        // Human
-        
-        // 先に置ける場所があるかチェックする
-        let possibleMoves = board.searchPos(&playerPiece);
-        if possibleMoves.len() > 0 {
-            let playerInput = getUserInput(&playerPiece);
-            if playerInput.is_none() {
-                continue;
+    let mut event_pump = sdl2_context.event_pump().unwrap();
+    'running: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape), ..
+                } => break 'running,
+                _ => {}
             }
-            let playerPos = playerInput.unwrap();
-    
-            // println!("({}, {})", playerPos.x, playerPos.y);
-    
-            if let Some(ret) = board.put(&playerPiece, &playerPos) {
-                board = ret.board;  // 新しい盤に更新
-                board.print();
-                board.printScore();
-                playerPass = false;
-            } else {
-                println!("You cannot place on {}", board::Pos::toDesc(playerPos.x, playerPos.y));
-                continue;
-            }    
-        } else {
-            println!("Sorry. No place for your piece.");
-            playerPass = true;
         }
-
-        // Computer
-        println!("Hmm ... ");
-        // stdout().flush().unwrap();
-        // for _ in 0..6 {
-        //     thread::sleep(time::Duration::from_secs_f64(0.5));
-        //     print!(".");
-        //     stdout().flush().unwrap();
-        // }
-        // println!();
-
-        let maybeResult = board.getBestMove(&computerPiece, 12);
-        if let Some(result) = maybeResult {
-            if result.path.len() > 0 {
-                let nextPos = &result.path[0].pos;
-                if let Some(ret) = board.put(&computerPiece, nextPos) {
-                    board = ret.board;
+        
+        if (!playerPass) || (!computerPass) {
+            // Human
+            
+            // 先に置ける場所があるかチェックする
+            let possibleMoves = board.searchPos(&playerPiece);
+            if possibleMoves.len() > 0 {
+                let playerInput = getUserInput(&playerPiece);
+                if playerInput.is_none() {
+                    continue;
+                }
+                let playerPos = playerInput.unwrap();
+        
+                // println!("({}, {})", playerPos.x, playerPos.y);
+        
+                if let Some(ret) = board.put(&playerPiece, &playerPos) {
+                    board = ret.board;  // 新しい盤に更新
                     board.print();
-                    println!("I put on {}", board::Pos::toDesc(nextPos.x, nextPos.y));
                     board.printScore();
+                    drawBoard(&mut canvas, &image_texture, &board);
+                    playerPass = false;
+                } else {
+                    println!("You cannot place on {}", board::Pos::toDesc(playerPos.x, playerPos.y));
+                    continue;
+                }    
+            } else {
+                println!("Sorry. No place for your piece.");
+                playerPass = true;
+            }
+
+            // Computer
+            println!("Hmm ... ");
+            // stdout().flush().unwrap();
+            // for _ in 0..6 {
+            //     thread::sleep(time::Duration::from_secs_f64(0.5));
+            //     print!(".");
+            //     stdout().flush().unwrap();
+            // }
+            // println!();
+
+            let maybeResult = board.getBestMove(&computerPiece, 12);
+            if let Some(result) = maybeResult {
+                if result.path.len() > 0 {
+                    let nextPos = &result.path[0].pos;
+                    if let Some(ret) = board.put(&computerPiece, nextPos) {
+                        board = ret.board;
+                        board.print();
+                        println!("I put on {}", board::Pos::toDesc(nextPos.x, nextPos.y));
+                        board.printScore();
+                        drawBoard(&mut canvas, &image_texture, &board);
+                    }
+                } else {
+                    println!("No place for me.");
+                    computerPass = true;
                 }
             } else {
                 println!("No place for me.");
                 computerPass = true;
             }
         } else {
-            println!("No place for me.");
-            computerPass = true;
+            if bFirst {
+                println!("*** Game Over ***");
+                board.printScore();
+                bFirst = false; // ここへはもう来ない
+            }
         }
     }
-
-    println!("*** Game Over ***");
-    board.printScore();
 }
 
 fn main() {
