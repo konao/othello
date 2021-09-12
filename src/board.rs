@@ -207,15 +207,6 @@ impl Board {
         self.setPiece(5, 4, Piece::Black);
     }
 
-    pub fn init2(&mut self) -> () {
-        self.setPiece(4, 4, Piece::White);
-        self.setPiece(5, 5, Piece::Black);
-        self.setPiece(4, 5, Piece::Black);
-        self.setPiece(5, 4, Piece::Black);
-        self.setPiece(6, 5, Piece::Black);
-        self.setPiece(6, 6, Piece::White);
-    }
-
     pub fn load(&mut self, boardPath: &str) -> bool {
         if let Some(lines) = self.readTextFile(boardPath).ok() {
             for i in 2..10 {
