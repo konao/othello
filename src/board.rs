@@ -6,12 +6,13 @@ use std::fs::File;
 // 駒
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Piece {
-    Space,
-    White,
-    Black
+    Space,  // 空白
+    White,  // 白
+    Black   // 黒
 }
 
 impl Piece {
+    // pieceに対する相手の駒を返す
     pub fn getOpponent(piece: &Piece) -> Piece {
         return match *piece {
             Piece::Space => Piece::Space,
@@ -20,6 +21,7 @@ impl Piece {
         };
     }
 
+    // 文字列表現を返す
     pub fn to_str(&self) -> &str {
         return match &self {
             Piece::Space => "Space",
@@ -124,7 +126,7 @@ pub struct Count {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Board {
     pieces: Vec<Piece>,
-    coefs: Vec<i32>
+    coefs: Vec<i32> // スコア計算用の係数（盤上の場所ごとに決まる）
 }
 
 impl Board {
@@ -271,7 +273,7 @@ impl Board {
         }
     }
 
-    // pieceが次に置ける場所を探す
+    // pieceが次に置ける場所を全て探す
     pub fn searchPos(&self, piece: &Piece) -> Vec<SearchResult1> {
         let mut result = Vec::new();
         for y in 1..=8 {
@@ -288,7 +290,8 @@ impl Board {
         return result;
     }
 
-    // (x, y)にpieceを置いたら何個相手の駒を取れるかを返す
+    // posにpieceを置いたら何個相手の駒を取れるかを返す
+    //
     // @param piece [i]
     // @param pos [i] 置く位置
     //
@@ -367,7 +370,7 @@ impl Board {
         }
     }
 
-    // 駒pieceを置ける位置を探し、
+    // pieceを置ける位置を探し、
     // そこに置いた場合の新しい盤のリストを返す
     //
     // 返り値のスコア(score)は
@@ -377,7 +380,7 @@ impl Board {
     // pieceにとって不利になる場合に置いた場合（例：四隅の斜め隣りに置いた場合など）
     //
     // 返り値のcapturedPieceLocsはひっくり返された駒の位置（アニメーション用）
-    pub fn genNextBoard(&self, piece: &Piece) -> Vec<SearchResult2> {
+    pub fn genNextBoards(&self, piece: &Piece) -> Vec<SearchResult2> {
 
         // 現在のボードに、pieceを置ける場所を探す
         let places = self.searchPos(&piece);
@@ -454,6 +457,7 @@ impl Board {
         })
     }
 
+    // pieceの手番でdepth手先まで読む
     pub fn genSearchTree(&self, piece: &Piece, depth: i32) -> Vec<SearchResult3> {
         let root = SearchResult3 {
             path: vec!(),
@@ -468,7 +472,7 @@ impl Board {
         let mut results = vec!();
 
         if depth > 0 {
-            let nextBoards: Vec<SearchResult2> = self.genNextBoard(piece);
+            let nextBoards: Vec<SearchResult2> = self.genNextBoards(piece);
             if nextBoards.len() == 0 {
                 // println!("no next board found! for {}", piece.to_str());
                 // self.print();
@@ -546,6 +550,7 @@ impl Board {
         return results;
     }
 
+    // 最善の手を探す
     pub fn getBestMove(&self, piece: &Piece, depth: i32) -> Option<SearchResult3> {
         let mut bestMove = None;
 
@@ -571,6 +576,7 @@ impl Board {
         return bestMove;
     }
 
+    // 白、黒が盤上に何個あるか数える
     pub fn getCount(&self) -> Count {
         let mut nWhitePieces = 0;
         let mut nBlackPieces = 0;
