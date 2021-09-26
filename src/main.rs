@@ -116,7 +116,7 @@ fn test01(optBoardPath: Option<String>) {
     board.print();
 
     let mut c=0;
-    let nextBoards = board.genNextBoard(&board::Piece::White);
+    let nextBoards = board.genNextBoards(&board::Piece::White);
     for nextBoard in &nextBoards {
         println!("[{}] ({}, {}) : ntake={}, score={}", c, nextBoard.pos.x, nextBoard.pos.y, nextBoard.ntake, nextBoard.score);
         nextBoard.board.print();
@@ -254,6 +254,28 @@ fn drawBoard<'a>(
     canvas.present();
 }
 
+fn getPosOnMouseClick(x: i32, y: i32) -> Option<board::Pos> {
+    let lm = 32;    // left margin
+    let tm = 32;    // top margin
+    let ps = 96;    // piece size
+
+    let px = x - lm;
+    let py = y - tm;
+    
+    if (px < 0) || (py < 0) {
+        return None;
+    }
+
+    let ix = px / ps;
+    let iy = py / ps;
+
+    if (ix > 7) || (iy > 7) {
+        return None;
+    }
+
+    return Some(board::Pos {x: ix+1, y: iy+1});
+}
+
 fn game(optBoardPath: Option<String>) {
     let VERSION = 0.3;
     let title = format!("*** Othello (ver {}) ***", VERSION);
@@ -309,12 +331,19 @@ fn game(optBoardPath: Option<String>) {
 
     let mut event_pump = sdl2_context.event_pump().unwrap();
     'running: loop {
+        let mut playerInput: Option<board::Pos> = None;
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape), ..
                 } => break 'running,
+                | Event::MouseButtonDown {
+                    x, y, ..
+                } => {
+                    // println!("(x,y)=({},{})", x, y);
+                    playerInput = getPosOnMouseClick(x, y);
+                },
                 _ => {}
             }
         }
@@ -327,13 +356,13 @@ fn game(optBoardPath: Option<String>) {
             // 先に置ける場所があるかチェックする
             let possibleMoves = board.searchPos(&playerPiece);
             if possibleMoves.len() > 0 {
-                let playerInput = getUserInput(&playerPiece);
+                // let playerInput = getUserInput(&playerPiece);
                 if playerInput.is_none() {
                     continue;
                 }
                 let playerPos = playerInput.unwrap();
         
-                // println!("({}, {})", playerPos.x, playerPos.y);
+                println!("({}, {})", playerPos.x, playerPos.y);
         
                 if let Some(ret) = board.put(&playerPiece, &playerPos) {
                     board = ret.board;  // 新しい盤に更新
