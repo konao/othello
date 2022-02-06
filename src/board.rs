@@ -99,7 +99,7 @@ pub struct SearchResult2 {
     pub board: Board,   // このボードになる
     pub ntake: i32,
     pub score: i32,
-    pub capturedPieceLocs: Vec<Pos>
+    pub capturedPieceLocs: Vec<Pos> // 相手の駒を取った位置
 }
 
 #[derive(Clone, Debug, PartialEq)]
