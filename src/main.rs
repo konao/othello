@@ -97,7 +97,6 @@ fn test00(optBoardPath: Option<String>) {
     for info in result.iter() {
         println!("{} = {}", board::Pos::toDesc(info.pos.x, info.pos.y), info.score);
     }
-
 }
 
 fn test01(optBoardPath: Option<String>) {
@@ -389,7 +388,7 @@ fn game(optBoardPath: Option<String>) {
             // }
             // println!();
 
-            let maybeResult = board.getBestMove(&computerPiece, 12);
+            let maybeResult = board.getBestMove(&computerPiece, 17);
             if let Some(result) = maybeResult {
                 if result.path.len() > 0 {
                     let nextPos = &result.path[0].pos;
