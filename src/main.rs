@@ -388,7 +388,7 @@ fn game(optBoardPath: Option<String>) {
             // }
             // println!();
 
-            let maybeResult = board.getBestMove(&computerPiece, 17);
+            let maybeResult = board.getBestMove(&computerPiece, 13);
             if let Some(result) = maybeResult {
                 if result.path.len() > 0 {
                     let nextPos = &result.path[0].pos;
