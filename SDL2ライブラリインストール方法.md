@@ -18,4 +18,4 @@ SDL2を使用したコードのビルドには、SDL2のlibファイルが必要
 [コピー先]
 `C:\Users\sekikawa\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib`
 
-コピー完了後、cargo buildでビルドできるはず
+コピー完了後、cargo buildでビルドできる
